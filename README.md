@@ -1,0 +1,2 @@
+# Lynx_Wallet_Test
+This is a simple PoC meant to show how to deposit and withdraw Dai to the Aave lending pool with a simple frontend just meant to interact with the deposit and withdraw function in my AaveAPY contract which makes calls to Aave's LendingPool contract. The contract is currently deployed in the Kovan testnet and I will continue to experiment with this so we can develop an idea on how we will implement smart contracts talking to DeFi protocols with our current frontend. 
