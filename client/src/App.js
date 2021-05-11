@@ -1,12 +1,12 @@
 import React, { Component } from "react";
-import AaveAPY from "./contracts/AaveAPY.json";
+import LynxAave from "./contracts/LynxAave.json";
 import Token from "./contracts/ERC20.json";
 import getWeb3 from "./getWeb3";
 
 import "./App.css";
 
 class App extends Component {
-  state = { loaded:false, depositAmount: 0, withdrawAmount: 0 };
+  state = { loaded: false, depositAmount: 0, withdrawAmount: 0 };
 
   componentDidMount = async () => {
     try {
@@ -15,27 +15,28 @@ class App extends Component {
 
       // Use web3 to get the user's accounts.
       this.accounts = await this.web3.eth.getAccounts();
- 
+
       // Get the contract instance.
-      this.networkId = await this.web3.eth.getChainId(); 
+      this.networkId = await this.web3.eth.getChainId();
+      this.LynxContractAddress = LynxAave.networks[this.networkId] && LynxAave.networks[this.networkId].address;
 
-      this.AaveAPYinstance = new this.web3.eth.Contract(
-        AaveAPY.abi,
-        AaveAPY.networks[this.networkId] && AaveAPY.networks[this.networkId].address,
+      this.LynxAaveinstance = new this.web3.eth.Contract(
+        LynxAave.abi,
+        this.LynxContractAddress
       );
-
+      
       this.Tokeninstance = new this.web3.eth.Contract(
-        Token.abi,
-        "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa"
+         Token.abi,
+         "0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD"
       );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
-      this.setState({loaded:true});
+      this.setState({ loaded: true });
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
-        `Failed to load web3, accounts, or contract. Check console for details.`,
+        `Failed to load web3, accounts, or contract. Check console for details.`
       );
       console.error(error);
     }
@@ -46,24 +47,34 @@ class App extends Component {
     const value = target.type === "checkbox" ? target.checked : target.value;
     const name = target.name;
     this.setState({
-      [name]: value
+      [name]: value,
     });
-  }
-// *(this.web3.utils.toWei("1", "ether"))
+  };
+  // *(this.web3.utils.toWei("1", "ether"))
   handleDepositSubmit = async () => {
-    const AaveAPYaddress = AaveAPY.networks[this.networkId].address;
-    const {depositAmount} = this.state;
-    const depositAmountInWei = depositAmount*(this.web3.utils.toWei("1").toString());
-    await this.Tokeninstance.methods.approve(AaveAPYaddress, depositAmountInWei).send({from: this.accounts[0]});
-    await this.AaveAPYinstance.methods.deposit(depositAmountInWei).send({from: this.accounts[0]});
-    alert(depositAmount+" Dai deposited");
-  }
+    const { depositAmount } = this.state;
+    const depositAmountInWei = this.web3.utils.toWei(depositAmount, "ether");
+   
+    await this.Tokeninstance.methods
+      .approve(this.LynxContractAddress, depositAmountInWei)
+      .send({ from: this.accounts[0] });
+
+    await this.LynxAaveinstance.methods
+      .doDeposit(depositAmountInWei)
+      .send({ from: this.accounts[0] });
+
+    alert(depositAmount + " Dai deposited");
+  };
 
   handleWithdrawSubmit = async () => {
-    const {withdrawAmount} = this.state;
-    await this.AaveAPYinstance.methods.withdraw(withdrawAmount).send({from: this.accounts[0]});
-    alert(withdrawAmount+" Dai withdrawn");
-  }
+    const { withdrawAmount } = this.state;
+    const withdrawAmountInWei = this.web3.utils.toWei(withdrawAmount, "ether");
+    alert(withdrawAmountInWei);
+    await this.LynxAaveinstance.methods
+      .doWithdraw(withdrawAmountInWei)
+      .send({ from: this.accounts[0] });
+    alert(withdrawAmount + " Dai withdrawn");
+  };
 
   render() {
     if (!this.state.loaded) {
@@ -71,16 +82,30 @@ class App extends Component {
     }
     return (
       <div className="App">
-      <h1>Earn APY with Aave</h1>
-
-      <h2>Enter amount in Dai to deposit</h2>
-      Dai Amount: <input type="text" name="depositAmount" value={this.state.depositAmount} onChange={this.handleInputChange} />
-      <button type="button" onClick={this.handleDepositSubmit}>Deposit</button>
-
-      <h2>Enter amount in Dai to withdraw</h2>
-      Dai Amount: <input type="text" name="withdrawAmount" value={this.state.withdrawAmount} onChange={this.handleInputChange} />
-      <button type="button" onClick={this.handleDepositSubmit}>Withdraw</button>
-    </div>
+        <h1>Earn APY with Aave</h1>
+        <h2>Enter amount in Dai to deposit</h2>
+        Dai Amount:{" "}
+        <input
+          type="text"
+          name="depositAmount"
+          value={this.state.depositAmount}
+          onChange={this.handleInputChange}
+        />
+        <button type="button" onClick={this.handleDepositSubmit}>
+          Deposit
+        </button>
+        <h2>Enter amount in Dai to withdraw</h2>
+        Dai Amount:{" "}
+        <input
+          type="text"
+          name="withdrawAmount"
+          value={this.state.withdrawAmount}
+          onChange={this.handleInputChange}
+        />
+        <button type="button" onClick={this.handleWithdrawSubmit}>
+          Withdraw
+        </button>
+      </div>
     );
   }
 }
