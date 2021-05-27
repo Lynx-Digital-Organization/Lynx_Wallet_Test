@@ -1,7 +1,9 @@
 import React, { Component } from "react";
-import LynxAave from "./contracts/LynxAave.json";
+import LynxUserFactory from "./contracts/LynxUserFactory.json";
+//import LynxUserFactory from "./contracts/LynxAave.json";
 import Token from "./contracts/ERC20.json";
 import getWeb3 from "./getWeb3";
+import * as etherscan from './etherscan';
 
 import "./App.css";
 
@@ -10,6 +12,8 @@ class App extends Component {
 
   componentDidMount = async () => {
     try {
+      this.accountIndex = 0;
+
       // Get network provider and web3 instance.
       this.web3 = await getWeb3();
 
@@ -18,10 +22,11 @@ class App extends Component {
 
       // Get the contract instance.
       this.networkId = await this.web3.eth.getChainId();
-      this.LynxContractAddress = LynxAave.networks[this.networkId] && LynxAave.networks[this.networkId].address;
+      this.LynxContractAddress = LynxUserFactory.networks[this.networkId] && LynxUserFactory.networks[this.networkId].address;
+      console.log(this.LynxContractAddress);
 
-      this.LynxAaveinstance = new this.web3.eth.Contract(
-        LynxAave.abi,
+      this.LynxUserFactoryinstance = new this.web3.eth.Contract(
+        LynxUserFactory.abi,
         this.LynxContractAddress
       );
       
@@ -57,24 +62,66 @@ class App extends Component {
    
     await this.Tokeninstance.methods
       .approve(this.LynxContractAddress, depositAmountInWei)
-      .send({ from: this.accounts[0] });
+      .send({ from: this.accounts[this.accountIndex] });
 
-    await this.LynxAaveinstance.methods
+    const receipt = await this.LynxUserFactoryinstance.methods
       .doDeposit(depositAmountInWei)
-      .send({ from: this.accounts[0] });
+      .send({ from: this.accounts[this.accountIndex] });
 
+    //console.log(receipt.events.LynxUserCreated.raw);
     alert(depositAmount + " Dai deposited");
   };
 
   handleWithdrawSubmit = async () => {
     const { withdrawAmount } = this.state;
     const withdrawAmountInWei = this.web3.utils.toWei(withdrawAmount, "ether");
-    alert(withdrawAmountInWei);
-    await this.LynxAaveinstance.methods
+
+    await this.LynxUserFactoryinstance.methods
       .doWithdraw(withdrawAmountInWei)
-      .send({ from: this.accounts[0] });
+      .send({ from: this.accounts[this.accountIndex] });
+    
     alert(withdrawAmount + " Dai withdrawn");
   };
+
+  handleBalanceSubmit = async () => {
+    this.setState({
+      balance: 0
+    })
+    var balanceX = await this.LynxUserFactoryinstance.methods
+      .getUserBalance()
+      .call({ from: this.accounts[this.accountIndex] });
+      this.setState({
+        balance: this.web3.utils.fromWei(balanceX, 'ether')
+      })
+  };
+
+  handleContractAddressSubmit = async () => {
+    //alert(this.accounts[this.accountIndex]);
+    this.setState({
+      contractAddress: 0x00
+    })
+    var addr = await this.LynxUserFactoryinstance.methods
+      .getUserContractByKey(this.accounts[this.accountIndex])
+      .call({ from: this.accounts[this.accountIndex] });
+
+    this.setState({
+      contractAddress: addr
+    })
+  };
+
+  handleGetDataSubmit = async () => {
+    this.setState({
+      transactions: 'Transactions:'
+    })
+    var addr = await this.LynxUserFactoryinstance.methods
+      .getUserContractByKey(this.accounts[this.accountIndex])
+      .call({ from: this.accounts[this.accountIndex] });
+    var jsonArr = await etherscan.getEtherscanData(addr);
+    console.log(jsonArr);
+    this.setState({
+      transactions: JSON.stringify(jsonArr, null, 2)
+    })
+  };  
 
   render() {
     if (!this.state.loaded) {
@@ -105,6 +152,40 @@ class App extends Component {
         <button type="button" onClick={this.handleWithdrawSubmit}>
           Withdraw
         </button>
+
+        <h2>Your Balance</h2>
+        Dai Balance:{" "}
+        <input
+          type="text"
+          name="balance"
+          value={this.state.balance}
+          onChange={this.handleInputChange}
+        />
+        <button type="button" onClick={this.handleBalanceSubmit}>
+          Get Balance
+        </button>
+
+        <h2>Your Contract Address</h2>
+        Lynx Contract:{" "}
+        <input
+          type="text"
+          name="contractAddress"
+          style={{width: '350px'}}
+          value={this.state.contractAddress}
+          onChange={this.handleInputChange}
+        />
+        <button type="button" onClick={this.handleContractAddressSubmit}>
+          Get Contract Address
+        </button>
+
+        <h2>Your Contract Data</h2>
+        <pre>
+          {this.state.transactions}
+        </pre>
+        <button type="button" onClick={this.handleGetDataSubmit}>
+          Get Contract Data
+        </button>
+
       </div>
     );
   }

@@ -1,7 +1,7 @@
 const path = require("path");
 require("dotenv").config({path : "./.env"});
 const HDWalletProvider = require("@truffle/hdwallet-provider");
-const AccountIndex = 4
+const AccountIndex = 0
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
@@ -26,7 +26,7 @@ module.exports = {
   },
   compilers: {
      solc: {
-      version: "^0.6.0",
+      version: "^0.6.12",
     },
   },
 

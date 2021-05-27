@@ -1,3 +1,4 @@
+let LynxUserFactory = artifacts.require("LynxUserFactory")
 let LynxAave = artifacts.require("LynxAave")
 
 module.exports = async function (deployer, network) {
@@ -20,7 +21,9 @@ module.exports = async function (deployer, network) {
                 throw Error(`Are you deploying to the correct network? (network selected: ${network})`)
         }
 
-        await deployer.deploy(LynxAave, lendingPoolAddressesProviderAddress)
+        await deployer.deploy(LynxUserFactory, lendingPoolAddressesProviderAddress)
+        //await deployer.deploy(LynxAave, lendingPoolAddressesProviderAddress)
+
     } catch (e) {
         console.log(`Error in migration: ${e.message}`)
     }

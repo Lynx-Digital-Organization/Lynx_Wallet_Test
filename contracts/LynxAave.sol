@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@aave/protocol-v2/contracts/interfaces/ILendingPoolAddressesProvider.sol";
 import "@aave/protocol-v2/contracts/interfaces/ILendingPool.sol";
 
+//this option does not provide current user balance AND anyone can withdraw
 contract LynxAave is Ownable {
     using SafeMath for uint256;
 
@@ -74,6 +75,7 @@ contract LynxAave is Ownable {
         ILendingPool lendingPool = ILendingPool(addressesProvider.getLendingPool());
         // Withdraw from lending pool
         lendingPool.withdraw(daiAddress, _amount, address(this));
+        ERC20(daiAddress).transfer(msg.sender, _amount); //send back to user
 
         emit LogWithdraw(msg.sender, daiAddress, _amount);
     }
