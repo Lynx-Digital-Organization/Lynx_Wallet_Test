@@ -69,9 +69,10 @@ contract LynxAave is Ownable {
         emit LogDeposit(msg.sender, daiAddress, _amount, allowanceLendingPool, data);
     }
 
-    function doWithdraw(uint256 _amount) external {
+    function doWithdraw(uint256 _amount) public {
 
         ILendingPool lendingPool = ILendingPool(addressesProvider.getLendingPool());
+ 
         // Withdraw from lending pool
         lendingPool.withdraw(daiAddress, _amount, address(this));
 

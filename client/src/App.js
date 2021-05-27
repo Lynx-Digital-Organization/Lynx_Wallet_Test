@@ -30,6 +30,11 @@ class App extends Component {
          "0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD"
       );
 
+      this.aTokeninstance = new this.web3.eth.Contract(
+        Token.abi,
+        "0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8"
+      );
+
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
       this.setState({ loaded: true });
@@ -69,10 +74,15 @@ class App extends Component {
   handleWithdrawSubmit = async () => {
     const { withdrawAmount } = this.state;
     const withdrawAmountInWei = this.web3.utils.toWei(withdrawAmount, "ether");
-    alert(withdrawAmountInWei);
+
+    await this.aTokeninstance.methods
+      .approve(this.LynxContractAddress, withdrawAmountInWei)
+      .send({ from: this.accounts[0] });
+
     await this.LynxAaveinstance.methods
       .doWithdraw(withdrawAmountInWei)
       .send({ from: this.accounts[0] });
+
     alert(withdrawAmount + " Dai withdrawn");
   };
 
