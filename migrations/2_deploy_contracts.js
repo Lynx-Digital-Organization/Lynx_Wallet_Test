@@ -8,7 +8,7 @@ module.exports = async function (deployer, network) {
 
         switch(network) {
             case "mainnet":
-            case "mainnet-fork":
+            case "ganache_mainnet":
             case "development": // For Ganache mainnet forks
                 lendingPoolAddressesProviderAddress = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8"; break
             case "ropsten":
@@ -21,7 +21,7 @@ module.exports = async function (deployer, network) {
                 throw Error(`Are you deploying to the correct network? (network selected: ${network})`)
         }
 
-        await deployer.deploy(LynxWallet, lendingPoolAddressesProviderAddress).then(() => deployer.deploy(LynxFactory, LynxWallet.address));
+        await deployer.deploy(LynxWallet).then(() => deployer.deploy(LynxFactory, LynxWallet.address));
     } catch (e) {
         console.log(`Error in migration: ${e.message}`)
     }

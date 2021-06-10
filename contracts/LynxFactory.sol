@@ -1,4 +1,4 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.6.0;
 
 import "./LynxWallet.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
@@ -8,25 +8,25 @@ contract LynxFactory {
         address _cloneAddress
     );
 
-    LynxWallet[] public lynxWalletClones;
+    mapping (address=>address) public lynxWallets;
     address immutable lynxWalletImplementationAddress;
+    address lendingPoolAddressesProvider = 0x88757f2f99175387aB4C6a4b3067c77A695b0349; // Kovan address
 
     constructor(address _lynxWalletImplementationAddress) public{
         lynxWalletImplementationAddress = _lynxWalletImplementationAddress;
     }
 
-    function createLynxWalletClone(address _lendingPoolAddressesProvider) external {
+    function createLynxWallet() external {
+        require(lynxWallets[msg.sender] == address(0), "User has already created a lynx wallet");
         address cloneAddress = Clones.clone(lynxWalletImplementationAddress);
-        LynxWallet(cloneAddress).initialize(_lendingPoolAddressesProvider);
+        LynxWallet(cloneAddress).initialize(lendingPoolAddressesProvider);
 
         emit LynxWalletCreated(cloneAddress);
-        lynxWalletClones.push(LynxWallet(cloneAddress));
+        lynxWallets[msg.sender] = cloneAddress;
     }
 
-    function getLynxWalletClones() external view returns(LynxWallet[] memory) {
-        return lynxWalletClones;
-    }
-    function getImplementationAddress() external view returns (address) {
-        return lynxWalletImplementationAddress;
+    function getLynxWalletAddress() external view returns (address) {
+        require(lynxWallets[msg.sender] != address(0), "User has not created a lynx wallet");
+        return lynxWallets[msg.sender];
     }
 }

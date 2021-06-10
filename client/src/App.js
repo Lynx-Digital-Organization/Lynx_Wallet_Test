@@ -1,5 +1,6 @@
 import React, { Component } from "react";
-import LynxAave from "./contracts/LynxAave.json";
+import LynxFactory from "./contracts/LynxFactory.json";
+import LynxWallet from "./contracts/LynxWallet.json";
 import Token from "./contracts/ERC20.json";
 import getWeb3 from "./getWeb3";
 
@@ -10,6 +11,7 @@ class App extends Component {
 
   componentDidMount = async () => {
     try {
+      this.accountIndex = 0;
       // Get network provider and web3 instance.
       this.web3 = await getWeb3();
 
@@ -18,21 +20,16 @@ class App extends Component {
 
       // Get the contract instance.
       this.networkId = await this.web3.eth.getChainId();
-      this.LynxContractAddress = LynxAave.networks[this.networkId] && LynxAave.networks[this.networkId].address;
+      this.LynxContractAddress = LynxFactory.networks[this.networkId] && LynxFactory.networks[this.networkId].address;
 
-      this.LynxAaveinstance = new this.web3.eth.Contract(
-        LynxAave.abi,
+      this.LynxFactoryInstance = new this.web3.eth.Contract(
+        LynxFactory.abi,
         this.LynxContractAddress
       );
       
-      this.Tokeninstance = new this.web3.eth.Contract(
+      this.TokenInstance = new this.web3.eth.Contract(
          Token.abi,
          "0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD"
-      );
-
-      this.aTokeninstance = new this.web3.eth.Contract(
-        Token.abi,
-        "0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8"
       );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
@@ -55,18 +52,34 @@ class App extends Component {
       [name]: value,
     });
   };
-  // *(this.web3.utils.toWei("1", "ether"))
+
+  handleCreateWalletSubmit = async () => {
+    await this.LynxFactoryInstance.methods
+      .createLynxWallet()
+      .send({ from: this.accounts[this.accountIndex] });
+  };
+
   handleDepositSubmit = async () => {
     const { depositAmount } = this.state;
     const depositAmountInWei = this.web3.utils.toWei(depositAmount, "ether");
-   
-    await this.Tokeninstance.methods
-      .approve(this.LynxContractAddress, depositAmountInWei)
-      .send({ from: this.accounts[0] });
+    const userWalletAddress = await this.LynxFactoryInstance.methods
+      .getLynxWalletAddress()
+      .call({ from: this.accounts[this.accountIndex] });
 
-    await this.LynxAaveinstance.methods
-      .doDeposit(depositAmountInWei)
-      .send({ from: this.accounts[0] });
+    alert("Depositing with Lynx Wallet at address: " + userWalletAddress);
+
+    const userLynxWalletInstance = new this.web3.eth.Contract(
+      LynxWallet.abi,
+      userWalletAddress
+    );
+  
+    await this.TokenInstance.methods
+      .approve(userWalletAddress, depositAmountInWei)
+      .send({ from: this.accounts[this.accountIndex] });
+
+    await userLynxWalletInstance.methods
+      .doDeposit(depositAmountInWei, this.accounts[this.accountIndex])
+      .send({ from: this.accounts[this.accountIndex] });
 
     alert(depositAmount + " Dai deposited");
   };
@@ -74,18 +87,57 @@ class App extends Component {
   handleWithdrawSubmit = async () => {
     const { withdrawAmount } = this.state;
     const withdrawAmountInWei = this.web3.utils.toWei(withdrawAmount, "ether");
+    const userWalletAddress = await this.LynxFactoryInstance.methods
+      .getLynxWalletAddress()
+      .call({ from: this.accounts[this.accountIndex] });
 
-    await this.aTokeninstance.methods
-      .approve(this.LynxContractAddress, withdrawAmountInWei)
-      .send({ from: this.accounts[0] });
+    alert("Withdrawing from Lynx Wallet at address: " + userWalletAddress);
 
-    await this.LynxAaveinstance.methods
-      .doWithdraw(withdrawAmountInWei)
-      .send({ from: this.accounts[0] });
+    const userLynxWalletInstance = new this.web3.eth.Contract(
+      LynxWallet.abi,
+      userWalletAddress
+    );
 
+    await userLynxWalletInstance.methods
+      .doWithdraw(withdrawAmountInWei,this.accounts[this.accountIndex])
+      .send({ from: this.accounts[this.accountIndex] });
+    
     alert(withdrawAmount + " Dai withdrawn");
   };
 
+  handleBalanceSubmit = async () => {
+    const userWalletAddress = await this.LynxFactoryInstance.methods
+      .getLynxWalletAddress()
+      .call({ from: this.accounts[this.accountIndex] });
+
+    const userLynxWalletInstance = new this.web3.eth.Contract(
+      LynxWallet.abi,
+      userWalletAddress
+    );
+
+    this.setState({
+      balance: 0
+    })
+    var balanceX = await userLynxWalletInstance.methods
+      .getUserBalance()
+      .call({ from: this.accounts[this.accountIndex] });
+      this.setState({
+        balance: this.web3.utils.fromWei(balanceX, 'ether')
+      })
+  };
+
+  // handleUserWalletAddressSumbit = async () => {
+  //   this.setState({
+  //     walletAddress: 0
+  //   })
+  //   var userWalletAddress = await this.LynxFactoryInstance.methods
+  //     .getLynxWalletAddress()
+  //     .call({ from: this.accounts[this.accountIndex] });
+  //     this.setState({
+  //       walletAddress: userWalletAddress
+  //     })
+  // };
+ 
   render() {
     if (!this.state.loaded) {
       return <div>Loading Web3, accounts, and contract...</div>;
@@ -93,6 +145,12 @@ class App extends Component {
     return (
       <div className="App">
         <h1>Earn APY with Aave</h1>
+
+        <h2>Register for Lynx Wallet</h2>
+        <button type="button" onClick={this.handleCreateWalletSubmit}>
+          Create my wallet
+        </button>
+
         <h2>Enter amount in Dai to deposit</h2>
         Dai Amount:{" "}
         <input
@@ -104,6 +162,7 @@ class App extends Component {
         <button type="button" onClick={this.handleDepositSubmit}>
           Deposit
         </button>
+
         <h2>Enter amount in Dai to withdraw</h2>
         Dai Amount:{" "}
         <input
@@ -115,6 +174,31 @@ class App extends Component {
         <button type="button" onClick={this.handleWithdrawSubmit}>
           Withdraw
         </button>
+
+        <h2>Your Balance</h2>
+        Dai Balance:{" "}
+        <input
+          type="text"
+          name="balance"
+          value={this.state.balance}
+          onChange={this.handleInputChange}
+        />
+        <button type="button" onClick={this.handleBalanceSubmit}>
+          Get Balance
+        </button>
+
+        {/* <h2>Your Wallet Address</h2>
+        User Wallet Address:{" "}
+        <input
+          type="text"
+          name="address"
+          value={this.state.walletAddress}
+          onChange={this.handleInputChange}
+        />
+        <button type="button" onClick={this.handleUserWalletAddressSumbit()}>
+          Get Address
+        </button> */}
+
       </div>
     );
   }

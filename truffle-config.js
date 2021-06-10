@@ -23,11 +23,15 @@ module.exports = {
       },
       network_id: 42
     },
+    ganache_mainnet: {
+      host: "127.0.0.1",
+      port: 8545,
+      network_id: 1
+    },
   },
   compilers: {
      solc: {
       version: "^0.6.0",
     },
   },
-
 };
